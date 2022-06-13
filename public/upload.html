@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="./index.css" />
+    <link rel="stylesheet" href="./bootstrap-5.1.1-dist/css/bootstrap.css" />
+  </head>
+
+  <body>
+    <section class="container-fluid all">
+      <div class="row d-flex justify-content-center">
+        <div class="col-11">
+          <div class="row shadow m-5" style="height: 85vh">
+            <div class="col-4">
+              <h2 class="text-light p-2">Basic Information</h2>
+
+              <span class="px-2 text-muted">Upload your music Picture</span>
+              <input
+                type="file"
+                id="pictureInp"
+                accept="png"
+                class="form-control"
+              />
+              <span class="px-2 text-muted">Upload your music</span>
+              <input type="file" id="musicInp" class="form-control" />
+              <p class="seam text-light">
+                You can upload your files seamlessly
+              </p>
+            </div>
+            <div class="vir col-1"></div>
+            <div class="col-6">
+              <p
+                id="errorUpload"
+                class="alert alert-danger bg-light text-danger"
+              ></p>
+              <div>
+                <label for="" class="text-light">Artist</label>
+                <input type="text" id="artist" class="form-control" />
+              </div>
+              <div>
+                <label for="" class="text-light">Song Title</label>
+                <input type="text" id="sTitle" class="form-control" />
+              </div>
+              <div>
+                <label for="" class="text-light">Featuring</label>
+                <input type="text" id="ft" class="form-control" />
+              </div>
+              <div class="row">
+                <div class="col-12">
+                  <div class="row">
+                    <div class="col-5">
+                      <label for="" class="text-light">Genres</label>
+                      <input
+                        type="text"
+                        name=""
+                        id="gen"
+                        class="form-control"
+                      />
+                    </div>
+                    <div class="col-5">
+                      <label for="" class="text-light">Producer(s)</label>
+                      <input type="text" id="producers" class="form-control" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <label for="" class="text-light">Description</label>
+              <textarea
+                name=""
+                class="form-control my-2"
+                id="desc"
+                cols="30"
+                rows="5"
+              ></textarea>
+              <div class="row">
+                <div class="col-12">
+                  <div class="row">
+                    <div class="col-6">
+                      <a href="./dashboard.html">
+                        <button
+                          class="back btn w-100 my-2 bg-danger text-light"
+                        >
+                          Back
+                        </button></a
+                      >
+                    </div>
+                    <div class="col-6">
+                      <button
+                        class="addItBtn btn w-100 my-2 text-light"
+                        id="postMusic"
+                      >
+                        Add Music
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="progress mt-3"
+                style="visibility: hidden; width: 100%; height: 40px"
+                id="uploadProgress"
+              >
+                <div
+                  class="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style="width: 0%; height: 40px"
+                  aria-valuenow="25"
+                  aria-valuemin="0"
+                  id="progressBar"
+                  aria-valuemax="100"
+                >
+                  <span id="progressSpan">0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script type="module">
+      errorUpload.style.display = "none";
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.7.0/firebase-app.js";
+      import {
+        getAuth,
+        createUserWithEmailAndPassword,
+        GoogleAuthProvider,
+        signInWithPopup,
+      } from "https://www.gstatic.com/firebasejs/9.7.0/firebase-auth.js";
+      import {
+        getDatabase,
+        set,
+        ref,
+        onValue,
+      } from "https://www.gstatic.com/firebasejs/9.7.0/firebase-database.js";
+      import {
+        getStorage,
+        ref as stRef,
+        uploadBytes,
+        uploadBytesResumable,
+        getDownloadURL,
+      } from "https://www.gstatic.com/firebasejs/9.7.0/firebase-storage.js";
+      // TODO: Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyD2j2fNUedfscFYh-rvcg98n2RYdknm44o",
+        authDomain: "boomplay-replica.firebaseapp.com",
+        databaseURL: "https://boomplay-replica-default-rtdb.firebaseio.com",
+        projectId: "boomplay-replica",
+        storageBucket: "boomplay-replica.appspot.com",
+        messagingSenderId: "798872345728",
+        appId: "1:798872345728:web:15d361f1b6163538cb5a65",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth();
+      const db = getDatabase();
+      const provider = new GoogleAuthProvider();
+      const storage = getStorage();
+
+      let nextValue = 0;
+      let nextRef = ref(db, "BoomUser");
+      let boomArray = [];
+      onValue(nextRef, (snapshot) => {
+        boomArray = snapshot.val();
+        if (boomArray) {
+          nextValue = boomArray.length;
+        } else {
+          nextValue = 0;
+        }
+      });
+
+      document.getElementById("postMusic").addEventListener("click", () => {
+        if (
+          pictureInp.value == "" &&
+          musicInp.value == "" &&
+          artist.value == "" &&
+          sTitle.value == "" &&
+          ft.value == "" &&
+          gen.value == "" &&
+          producers.value == "" &&
+          desc.value == ""
+        ) {
+          errorUpload.style.display = "block";
+          errorUpload.innerText = "Please fill in your details";
+        } else if (
+          pictureInp.value == "" &&
+          musicInp.value == "" &&
+          artist.value == "" &&
+          sTitle.value == "" &&
+          ft.value == "" &&
+          gen.value == "" &&
+          producers.value == "" &&
+          desc.value == ""
+        ) {
+          errorUpload.style.display = "block";
+          errorUpload.innerText = "Please fill in the missing details";
+        } else {
+          let getIndex = JSON.parse(localStorage.currentUser);
+          console.log(getIndex);
+          let allUser = boomArray[getIndex];
+          console.log(boomArray);
+          console.log(allUser);
+
+          let file = pictureInp.files[0];
+          let filenamepic = file.name;
+          console.log(file.name);
+          let fileMusic = musicInp.files[0];
+          let fileNameMusic = fileMusic.name;
+          console.log(filenamepic);
+          var time = new Date();
+          var allTime = time.toLocaleTimeString();
+          let getItem = boomArray[getIndex].userUpload;
+          console.log(getItem);
+          if (!getItem) {
+            let newestArray = [
+              {
+                myArtist: artist.value,
+                myTitle: sTitle.value,
+                feature: ft.value,
+                myGenre: gen.value,
+                myProducer: producers.value,
+                filename: fileMusic.name,
+                allTime,
+                picname: file.name,
+                description: desc.value,
+              },
+            ];
+
+            console.log(newestArray);
+            let list = { ...allUser, userUpload: newestArray };
+            console.log(list);
+            let dbRef = ref(db, `BoomUser/${getIndex}`);
+            set(dbRef, list);
+            let bucketImg = stRef(storage, `BoomPic/${filenamepic}`);
+            let bucketRef = stRef(storage, `BoomMusic/${fileNameMusic}`);
+            let uploadImg = uploadBytesResumable(bucketImg, file);
+            let uploadTask = uploadBytesResumable(bucketRef, fileMusic);
+            uploadTask.on(
+              "state_changed",
+              function (snapshot) {
+                let totalBytes = snapshot.totalBytes;
+                let bytesTransferred = snapshot.bytesTransferred;
+                let progress = Math.round(
+                  (bytesTransferred / totalBytes) * 100
+                );
+                uploadProgress.style.visibility = "visible";
+                progressBar.style.width = `${progress}%`;
+                progressSpan.innerHTML = `${progress}%`;
+              },
+              function (err) {},
+              function () {
+                progressSpan.innerHTML = "Uploaded successfully";
+                progressBar.classList.add("bg-success");
+              }
+            );
+          } else {
+            let newestArray = [];
+            let getUserUploadDetails = boomArray[getIndex].userUpload;
+            console.log(getUserUploadDetails);
+            let esistingArray = {
+              myArtist: artist.value,
+              myTitle: sTitle.value,
+              feature: ft.value,
+              myGenre: gen.value,
+              myProducer: producers.value,
+              filename: fileMusic.name,
+              allTime,
+              picname: file.name,
+              description: desc.value,
+            };
+            console.log(esistingArray, "newme");
+            getUserUploadDetails.push(esistingArray);
+            let list = { ...allUser, userUpload: getUserUploadDetails };
+            console.log(list);
+            let dbRef = ref(db, `BoomUser/${getIndex}`);
+            set(dbRef, list);
+            let bucketImg = stRef(storage, `BoomPic/${filenamepic}`);
+            let bucketRef = stRef(storage, `BoomMusic/${fileNameMusic}`);
+            let uploadImg = uploadBytesResumable(bucketImg, file);
+            let uploadTask = uploadBytesResumable(bucketRef, fileMusic);
+            uploadTask.on(
+              "state_changed",
+              function (snapshot) {
+                let totalBytes = snapshot.totalBytes;
+                let bytesTransferred = snapshot.bytesTransferred;
+                let progress = Math.round(
+                  (bytesTransferred / totalBytes) * 100
+                );
+                uploadProgress.style.visibility = "visible";
+                progressBar.style.width = `${progress}%`;
+                progressSpan.innerHTML = `${progress}%`;
+              },
+              function (err) {},
+              function () {
+                progressSpan.innerHTML = "Uploaded successfully";
+
+                progressBar.classList.add("bg-success");
+              }
+            );
+          }
+          artist.value = "";
+          sTitle.value = "";
+          ft.value = "";
+          gen.value = "";
+          producers.value = "";
+          pictureInp.value = "";
+          musicInp.value = "";
+          desc.value = "";
+        }
+      });
+    </script>
+  </body>
+</html>
+
+<!-- if (!getItem) {
+           
+            let list = { ...allUser, userUpload: newestArray };
+            let dbRef = ref(db, `BoomUser/${nextValue}`);
+             set(dbRef, list);
+             let bucketImg =stRef(storage, `BoomUser/${filenamepic}`)
+             let bucketRef = stRef(storage, `BoomUser/${fileNameMusic}`)
+             let uploadImg= uploadBytesResumable(bucketImg, file);
+             let uploadTask= uploadBytesResumable(bucketRef, fileMusic);
+             uploadTask.on('state_changed', function (snapshot) {
+                let totalBytes =snapshot.totalBytes
+              let bytesTransferred= snapshot.bytesTransferred
+              let progress = Math.round((bytesTransferred/totalBytes)*100);
+              uploadProgress.style.visibility='visible'
+              progressBar.style.width=`${progress}%`
+             progressSpan.innerHTML= `${progress}%`
+                 
+             }, function(err){
+
+             }, function (){
+                progressSpan.innerHTML="Uploaded successfully"
+                progressBar.classList.add('bg-success')
+                 
+
+             })
+
+
+
+
+              
+          } 
+        } -->
